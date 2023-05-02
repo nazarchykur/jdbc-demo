@@ -1,12 +1,12 @@
 package org.example;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import lombok.SneakyThrows;
 import org.postgresql.ds.PGSimpleDataSource;
 
 import javax.sql.DataSource;
-import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 
 /**
  * Hello world!
@@ -65,9 +65,8 @@ public class App {
          */
 
 
-
 //        DataSource dataSource = new PGSimpleDataSource();
-        dataSource = initDatasource();
+//        dataSource = initDatasource();
 
         // get product by id using PreparedStatement (we also can use Statement)
 //        try(Connection connection = dataSource.getConnection()) {
@@ -87,7 +86,6 @@ public class App {
 //                }
 //            }
 //        }
-
 
 
         // select all products as a list using Statement (we also can use PreparedStatement)
@@ -110,7 +108,6 @@ public class App {
 //        }
 
 
-
         // for insert, update, delete using PreparedStatement (since we put some parameters, better to use PreparedStatement)
 //        try(Connection con = dataSource.getConnection()) {
 //            try (PreparedStatement ps = con.prepareStatement("insert into products(name, price) VALUES (?, ?)")) {
@@ -120,7 +117,6 @@ public class App {
 //                ps.executeUpdate();
 //            }
 //        }
-
 
 
         // use a lot of inserts without batch => bad performance
@@ -137,7 +133,6 @@ public class App {
 //        }
 //        var end = System.currentTimeMillis();
 //        System.out.println("it took: " + (end - start) + "ms"); // it took: 3317ms  | it took: 3562ms
-
 
 
         // using batch
@@ -161,15 +156,85 @@ public class App {
 //        var end = System.currentTimeMillis();
 //        System.out.println("using batch it took: " + (end - start) + "ms"); // 292ms | 293ms
 
+
+//        // without connection pool
+//        initDatasource();
+//        var start = System.currentTimeMillis();
+//        for (int i = 1; i <= 1000; i++) {
+//            try (Connection con = dataSource.getConnection()) {
+//                // just open connection for each iteration
+//            }
+//        }
+//        var end = System.currentTimeMillis();
+//        System.out.println("it took: " + (end - start) + "ms"); // it took: 4195ms | 4235ms
+
+
+        // with our connection pool
+//        initializePooledCustomDataSource();
+//        var start = System.currentTimeMillis();
+//        for (int i = 1; i <= 1000; i++) {
+//            try (Connection con = dataSource.getConnection()) {
+//                // just open connection for each iteration
+//            }
+//        }
+//        var end = System.currentTimeMillis();
+//        System.out.println("it took: " + (end - start) + "ms"); // it took: 3ms | 2ms
+
+
+        // with our connection pool
+        initializeHikariCpDataSource();
+        var start = System.currentTimeMillis();
+        for (int i = 1; i <= 1000; i++) {
+            try (Connection con = dataSource.getConnection()) {
+                // just open connection for each iteration
+            }
+        }
+        var end = System.currentTimeMillis();
+        System.out.println("it took: " + (end - start) + "ms"); // it took: 10ms
+
+
     }
 
     // after adding Postgres driver as dependency we can use this as implementation of DataSource
-    private static PGSimpleDataSource initDatasource() {
-        PGSimpleDataSource dataSource = new PGSimpleDataSource();
-        dataSource.setURL("jdbc:postgresql://localhost:5432/pg-db-demo");
-        dataSource.setUser("postgres");
-        dataSource.setPassword("pass");
+//    private static PGSimpleDataSource initDatasource() {
+//        PGSimpleDataSource dataSource = new PGSimpleDataSource();
+//        dataSource.setURL("jdbc:postgresql://localhost:5432/pg-db-demo");
+//        dataSource.setUser("postgres");
+//        dataSource.setPassword("pass");
+//
+//        return dataSource;
+//    }
 
-        return dataSource;
+    private static void initDatasource() {
+        PGSimpleDataSource pgSimpleDataSource = new PGSimpleDataSource();
+        pgSimpleDataSource.setURL("jdbc:postgresql://localhost:5432/pg-db-demo");
+        pgSimpleDataSource.setUser("postgres");
+        pgSimpleDataSource.setPassword("pass");
+
+        dataSource = pgSimpleDataSource;
+    }
+
+//    private static void initializePooledCustomDataSource() {
+//        PooledDataSource pooledDataSource = new PooledDataSource(
+//                "jdbc:postgresql://localhost:5432/pg-db-demo",
+//                "postgres",
+//                "pass"
+//        );
+//
+//        dataSource = pooledDataSource;
+//    }
+
+    private static void initializeHikariCpDataSource() {
+        // add Hikari dependency
+        // set props (or read props from file)
+        // create pooled datasource
+
+        HikariConfig config = new HikariConfig();
+        config.setDriverClassName("org.postgresql.Driver");
+        config.setJdbcUrl("jdbc:postgresql://localhost:5432/pg-db-demo");
+        config.setUsername("postgres");
+        config.setPassword("pass");
+
+        dataSource = new HikariDataSource(config);
     }
 }
